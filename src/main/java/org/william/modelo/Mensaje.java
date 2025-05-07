@@ -1,10 +1,10 @@
 package org.william.modelo;
 
-public class Mensaje {
+public class Mensaje<T> {
     private String mensaje;
-    private String data;
+    private T data;
 
-    public Mensaje(String mensaje, String data) {
+    public Mensaje(String mensaje, T data) {
         this.mensaje = mensaje;
         this.data = data;
     }
@@ -19,11 +19,11 @@ public class Mensaje {
         this.mensaje = mensaje;
     }
 
-    public String getData() {
+    public T getData() {
         return data;
     }
 
-    public void setData(String data) {
+    public void setData(T data) {
         this.data = data;
     }
 }

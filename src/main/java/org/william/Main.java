@@ -1,106 +1,29 @@
 package org.william;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.william.modelo.Mensaje;
-import org.william.modelo.Producto;
-import org.william.modelo.ProductosBD;
+import io.javalin.Javalin;
+import org.william.controller.ExceptionController;
+import org.william.controller.HealthController;
+import org.william.controller.ProductoController;
+import org.william.repository.ProductosRepository;
+import org.william.service.ProductoService;
 
-import static spark.Spark.*;
-
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-public class Main { 
+public class Main {
     public static void main(String[] args) {
+        ProductosRepository productosRepository = new ProductosRepository();
+        ProductoService productoService = new ProductoService(productosRepository);
+        ProductoController productoController = new ProductoController(productoService);
+        ExceptionController exceptionController = new ExceptionController();
+        HealthController healthController = new HealthController();
 
-        ObjectMapper mapper = new ObjectMapper();
+        var app = Javalin.create();
 
-        get("/", (request, response) -> {
-            response.type("application/json"); // Establece el tipo de contenido
-            return "{\"message\": \"Hello, World!\"}"; // Devuelve un JSON
-        });
+        exceptionController.iniciarControl(app);
 
-        // http://localhost:4567/hello
-        post("/productos", (request, response) -> {
-            response.type("application/json");
-            String body = request.body();
-            Producto product = mapper.readValue(body, Producto.class);
+        healthController.configurarRutas(app);
+        productoController.configurarRutas(app);
 
+        app.before(ctx -> ctx.header("Content-Type", "application/json"));
 
-
-            product.setId(ProductosBD.autoId);
-
-            ProductosBD.autoId++;
-
-            ProductosBD.productos.add(product);
-
-            Mensaje mensaje = new Mensaje("Producto agregado", body);
-
-            return mapper.writeValueAsString(mensaje);
-        });
-
-        get("/productos", (request, response) -> {
-            response.type("application/json");
-            return mapper.writeValueAsString(ProductosBD.productos);
-        });
-
-        get("/productos/:id", (request, response) -> {
-            response.type("application/json");
-            String id = request.params(":id");
-            if (id == null) {
-                response.status(400);
-                return mapper.writeValueAsString(new Mensaje("ID no proporcionado", ""));
-            }
-            Producto product = null;
-            for (Producto p : ProductosBD.productos) {
-                if (p.getId() == Integer.parseInt(id)) {
-                    product = p;
-                    break;
-                }
-            }
-            if (product != null) {
-                return mapper.writeValueAsString(product);
-            } else {
-                response.status(404);
-                return mapper.writeValueAsString(new Mensaje("Producto no encontrado", ""));
-            }
-        });
-
-        put("/productos/:id", (request, response) -> {
-            response.type("application/json");
-            String id = request.params(":id");
-            if (id == null) {
-                response.status(400);
-                return mapper.writeValueAsString(new Mensaje("ID no proporcionado", ""));
-            }
-            String body = request.body();
-            Producto updatedProduct = mapper.readValue(body, Producto.class);
-            updatedProduct.setId(Integer.parseInt(id));
-
-            for (int i = 0; i < ProductosBD.productos.size(); i++) {
-                if (ProductosBD.productos.get(i).getId() == Integer.parseInt(id)) {
-                    ProductosBD.productos.set(i, updatedProduct);
-                    return mapper.writeValueAsString(new Mensaje("Producto actualizado", ""));
-                }
-            }
-            response.status(404);
-            return mapper.writeValueAsString(new Mensaje("Producto no encontrado", ""));
-        });
-
-        delete("/productos/:id", (request, response) -> {
-            response.type("application/json");
-            String id = request.params(":id");
-            if (id == null) {
-                response.status(400);
-                return mapper.writeValueAsString(new Mensaje("ID no proporcionado", ""));
-            }
-            for (int i = 0; i < ProductosBD.productos.size(); i++) {
-                if (ProductosBD.productos.get(i).getId() == Integer.parseInt(id)) {
-                    ProductosBD.productos.remove(i);
-                    return mapper.writeValueAsString(new Mensaje("Producto eliminado", ""));
-                }
-            }
-            response.status(404);
-            return mapper.writeValueAsString(new Mensaje("Producto no encontrado", ""));
-        });
+        app.start(4567);
     }
 }
